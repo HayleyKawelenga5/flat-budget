@@ -1,0 +1,91 @@
+"""
+A user belonging to a flat.
+Authentication is handled via Cognito.
+"""
+type User {
+  id: ID!
+  name: String!
+}
+
+"""
+A flat (shared household).
+"""
+type Flat {
+  id: ID!
+  name: String!
+  members: [User!]!
+}
+
+"""
+Supported expense categories.
+"""
+enum ExpenseCategory {
+  GROCERIES
+  POWER
+  WIFI
+  RENT
+  OTHER
+}
+
+"""
+A single expense entry.
+"""
+type Expense {
+  id: ID!
+  amount: Float!
+  category: ExpenseCategory!
+  paidBy: User!
+  date: AWSDate!
+}
+
+"""
+Aggregated expense summary for a month.
+"""
+type Summary {
+  total: Float!
+  perPerson: Float!
+}
+
+"""
+Root query operations.
+"""
+type Query {
+  """
+  Returns the flat the current user belongs to.
+  """
+  myFlat: Flat
+
+  """
+  Returns all expenses for the given month (YYYY-MM).
+  """
+  expenses(month: String!): [Expense!]!
+
+  """
+  Returns aggregated totals for the given month.
+  """
+  monthlySummary(month: String!): Summary!
+}
+
+"""
+Root mutation operations.
+"""
+type Mutation {
+  """
+  Creates a new flat and assigns the current user as a member.
+  """
+  createFlat(name: String!): Flat!
+
+  """
+  Adds a new expense to the current user's flat.
+  """
+  addExpense(
+    amount: Float!
+    category: ExpenseCategory!
+    date: AWSDate!
+  ): Expense!
+}
+
+"""
+AWS scalar definitions used by AppSync.
+"""
+scalar AWSDate
