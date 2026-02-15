@@ -2,6 +2,7 @@ import { Stack, StackProps } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as appsync from 'aws-cdk-lib/aws-appsync';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
 
 export class InfraStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
@@ -24,6 +25,22 @@ export class InfraStack extends Stack {
       partitionKey: { name: 'PK', type: dynamodb.AttributeType.STRING },
       sortKey: { name: 'SK', type: dynamodb.AttributeType.STRING },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+    });
+
+    const getBudgetSummaryFn = new lambda.Function(this, 'GetBudgetSummaryFn', {
+    runtime: lambda.Runtime.NODEJS_18_X,
+    handler: 'index.handler',
+    code: lambda.Code.fromAsset('lambda/getBudgetSummary'),
+    });
+
+    const lambdaDataSource = api.addLambdaDataSource(
+    'BudgetLambdaDS',
+    getBudgetSummaryFn
+    );
+
+    lambdaDataSource.createResolver('MonthlySummaryResolver', {
+    typeName: 'Query',
+    fieldName: 'monthlySummary',
     });
   }
 }
