@@ -1,0 +1,28 @@
+:root {
+  --text: #6b6375;
+  --text-h: #08060d;
+  --bg: #f5f5f5;
+  --border: #e5e4e7;
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #9ca3af;
+    --text-h: #f3f4f6;
+    --bg: #16171d;
+    --border: #2e303a;
+  }
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+#root {
+  max-width: 100%;
+  margin: 0 auto;
+}
