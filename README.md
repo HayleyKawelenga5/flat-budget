@@ -1,135 +1,276 @@
 # Flat Budget 
 
-Flat Budget is a full‑stack web application for tracking shared household expenses in a flat. It allows flatmates to record expenses, view monthly summaries, and see how costs are split per person, all backed by a secure, schema‑first GraphQL API on AWS.
-
-This project is designed as a **realistic, production‑style system** to demonstrate modern backend and cloud engineering practices alongside a React frontend.
+A full-stack budgeting application for flatmates to track shared household expenses. Built with React, AWS AppSync GraphQL, Lambda, and DynamoDB.
 
 ---
 
 ## Features
 
-*  **User authentication** with AWS Cognito
-*  **Flat creation** and membership management
-*  **Expense tracking** (groceries, rent, power, Wi‑Fi, etc.)
-*  **Monthly summaries** with per‑person cost splitting
-*  **Visual dashboards** with charts
-*  **Schema‑first GraphQL API**
+- **Monthly expense summaries** with automatic per-person cost splitting
+- **Expense tracking** by category (Groceries, Power, WiFi, Rent, Other)
+- **Month-by-month view** with historical data access
+- **Real-time updates** using Apollo Client cache
+- **API Key authentication** (ready to upgrade to Cognito)
+- **Responsive design** for desktop and mobile
 
 ---
 
-##  Why GraphQL?
+## Architecture
 
-GraphQL was chosen over REST to:
-
-* Provide a **strongly typed contract** between frontend and backend
-* Enable flexible data fetching for dashboards and summaries
-* Centralise domain logic (aggregation, splitting) in the API layer
-
-The schema acts as the source of truth for the entire system.
-
----
-
-##  Architecture Overview
-
-**Frontend**
-
-* React
-* Apollo Client
-* Cognito authentication
-
-**Backend (AWS)**
-
-* AWS AppSync (GraphQL API)
-* AWS Lambda (business logic & resolvers)
-* DynamoDB (single‑table design)
-* AWS Cognito (user authentication)
-* AWS CDK (infrastructure as code)
+### **Backend (AWS Serverless)**
 
 ```
-React App
-   ↓
-Apollo Client
-   ↓
-AWS AppSync (GraphQL)
-   ↓
-Lambda Resolvers
-   ↓
-DynamoDB
+React Frontend
+      ↓
+Apollo Client (GraphQL)
+      ↓
+AWS AppSync API
+      ↓
+Lambda Functions
+      ↓
+DynamoDB (Single-table design)
+```
+
+### **Technology Stack**
+
+| Layer | Technology | Purpose |
+|-------|-----------|---------|
+| **Frontend** | React 18 + Vite | UI framework & build tool |
+| | Apollo Client 3.x | GraphQL client & state management |
+| **API** | AWS AppSync | Managed GraphQL API service |
+| **Compute** | AWS Lambda | Serverless business logic |
+| **Database** | DynamoDB | NoSQL database with single-table design |
+| **IaC** | AWS CDK (TypeScript) | Infrastructure as Code |
+
+---
+
+## Project Structure
+
+```
+flat-budget/
+├── backend/
+│   └── schema/
+│       └── schema.graphql          # GraphQL schema definition
+├── frontend/
+│   ├── src/
+│   │   ├── components/             # React components
+│   │   │   ├── Summary.jsx         # Monthly summary display
+│   │   │   ├── ExpenseList.jsx     # Expense list
+│   │   │   └── AddExpenseForm.jsx  # Add expense form
+│   │   ├── graphql/
+│   │   │   └── queries.js          # GraphQL queries & mutations
+│   │   ├── apollo.js               # Apollo Client configuration
+│   │   ├── App.jsx                 # Main app component
+│   │   └── main.jsx                # App entry point
+│   └── package.json
+└── infra/
+    ├── lambda/                     # Lambda function code
+    │   ├── getBudgetSummary/       # Monthly summary query
+    │   ├── getExpenses/            # Get expenses query
+    │   └── addExpense/             # Add expense mutation
+    └── lib/
+        └── infra-stack.ts          # CDK infrastructure definition
 ```
 
 ---
 
-##  Data Modelling
+## Database Schema (DynamoDB)
 
-A **single DynamoDB table** is used to support all access patterns efficiently.
+**Single-table design** with composite keys:
 
-##  GraphQL Schema (Core Types)
+| PK | SK | Attributes |
+|----|----|------------|
+| `FLAT#1` | `METADATA` | name, memberCount |
+| `FLAT#1` | `EXPENSE#2026-04#<uuid>` | amount, category, date, paidBy |
+| `FLAT#1` | `USER#<id>` | name, email |
 
-* `Flat`
-* `User`
-* `Expense`
-* `Summary`
-
-Queries and mutations are designed around **real user actions**, such as:
-
-* Fetching monthly expenses
-* Calculating per‑person cost splits
-* Adding new expenses
+**Benefits:**
+- All flat data in one partition (fast queries)
+- Monthly expenses sorted by SK prefix
+- No table joins needed
 
 ---
 
-## 🚀 Getting Started (Local Development)
+## Getting Started
 
-### Prerequisites
+### **Prerequisites**
 
-* Node.js 18+
-* AWS account (free tier)
-* AWS CDK
+- Node.js 18+
+- AWS Account (free tier eligible)
+- AWS CLI configured with credentials
+- AWS CDK installed: `npm install -g aws-cdk`
 
-### Install dependencies
+### **1. Install Dependencies**
 
 ```bash
+# Install CDK dependencies
+cd infra
+npm install
+
+# Install frontend dependencies
+cd ../frontend
 npm install
 ```
 
-### Deploy backend
+### **2. Deploy Backend Infrastructure**
 
 ```bash
 cd infra
+cdk bootstrap  # First time only
 cdk deploy
 ```
 
-### Run frontend
+This creates:
+- DynamoDB table
+- 3 Lambda functions
+- AppSync GraphQL API
+- IAM roles and permissions
+
+**Note:** Save the API URL and API Key from the output!
+
+### **3. Configure Frontend**
+
+Update `frontend/src/apollo.js` with your AppSync endpoint and API key:
+
+```javascript
+uri: 'https://YOUR-API-ID.appsync-api.REGION.amazonaws.com/graphql',
+headers: {
+  'x-api-key': 'YOUR-API-KEY',
+}
+```
+
+### **4. Seed Initial Data**
+
+Create a flat metadata record in DynamoDB:
+
+```json
+{
+  "PK": "FLAT#1",
+  "SK": "METADATA",
+  "name": "My Flat",
+  "memberCount": 3
+}
+```
+
+### **5. Run Frontend**
 
 ```bash
 cd frontend
 npm run dev
 ```
 
----
-
-##  What This Project Demonstrates
-
-* Schema‑first GraphQL API design
-* Secure authentication & authorization
-* DynamoDB single‑table modelling
-* Serverless AWS architecture
-* Infrastructure as Code using CDK
-* Full‑stack integration with React
+Open **http://localhost:5173** in your browser.
 
 ---
 
-##  Future Improvements
+## Development
 
-* Weekly grocery budgets & alerts
-* Expense categories analytics
-* Flatmate invitations
-* Receipt uploads (S3)
-* Email notifications
+### **Adding a New Expense**
+
+The app automatically:
+1. Generates a UUID for the expense
+2. Uses current month in SK (`EXPENSE#2026-04#uuid`)
+3. Includes paidBy with user info
+4. Refetches summary and expense list
+
+### **Testing GraphQL API**
+
+Use the AppSync console to test queries:
+
+```graphql
+query GetSummary {
+  monthlySummary(month: "2026-04") {
+    total
+    perPerson
+  }
+}
+
+mutation AddExpense {
+  addExpense(
+    amount: 50.00
+    category: GROCERIES
+    date: "2026-04-07"
+  ) {
+    id
+    amount
+    category
+  }
+}
+```
 
 ---
 
-##  Author
+## Future Improvements
 
-Built by **Hayley Kawelenga** as a personal engineering project to explore GraphQL, AWS serverless architecture, and full‑stack application design.
+### **Phase 1: Authentication & Multi-user**
+- [ ] Integrate AWS Cognito for user authentication
+- [ ] User login/signup flow
+- [ ] Associate expenses with authenticated users
+- [ ] Flat membership invitations
+
+### **Phase 2: Enhanced Features**
+- [ ] Edit/delete expenses
+- [ ] Expense approval workflow
+- [ ] Budget limits per category
+- [ ] Budget alerts (e.g., "80% of monthly budget spent")
+- [ ] Search and filter expenses
+- [ ] Export to CSV
+
+### **Phase 3: Analytics & Insights**
+- [ ] Expense trends over time (charts)
+- [ ] Category breakdown (pie charts)
+- [ ] Per-person spending analytics
+- [ ] Monthly comparison reports
+- [ ] Spending patterns (who pays for what most often)
+
+### **Phase 4: Advanced Functionality**
+- [ ] Receipt uploads (S3 + image recognition)
+- [ ] Recurring expenses (automatic entry)
+- [ ] Split expenses unevenly (custom percentages)
+- [ ] Settlement tracking (who owes whom)
+- [ ] Payment integration (Stripe/PayPal)
+- [ ] Mobile app (React Native)
+
+### **Phase 5: Collaboration & Notifications**
+- [ ] Email notifications for new expenses
+- [ ] Monthly summary emails
+- [ ] Comment/notes on expenses
+- [ ] Expense approval/dispute system
+- [ ] Push notifications
+
+### **Phase 6: DevOps & Scale**
+- [ ] CI/CD pipeline (GitHub Actions)
+- [ ] Automated testing (Jest, React Testing Library)
+- [ ] Monitoring & logging (CloudWatch dashboards)
+- [ ] Error tracking (Sentry)
+- [ ] Performance optimization (lazy loading, code splitting)
+- [ ] Multi-flat support with better data isolation
+
+---
+
+## Cost Estimate
+
+**AWS Free Tier (first 12 months):**
+- DynamoDB: 25 GB storage, 25 RCU/WCU
+- Lambda: 1M requests/month, 400,000 GB-seconds
+- AppSync: 250,000 queries/mutations
+
+**Expected cost (beyond free tier):**
+- ~$1-5/month for small household usage
+- Scales automatically with usage
+
+---
+
+## Author
+
+**Hayley Kawelenga**
+
+Built as a personal project to explore:
+- GraphQL API design
+- AWS serverless architecture
+- Single-table DynamoDB modeling
+- Full-stack development with React
+- Infrastructure as Code
+
+
 
